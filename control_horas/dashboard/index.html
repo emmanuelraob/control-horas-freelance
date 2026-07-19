@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Dashboard — Control de Horas</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Control de Horas</h1>
+    <div class="topbar-kpis" id="topbar-kpis"></div>
+  </header>
+
+  <main>
+    <section class="kpis" id="kpis"></section>
+
+    <section class="grid-2">
+      <div class="card">
+        <h2>Línea de tiempo de hoy</h2>
+        <div id="timeline"></div>
+      </div>
+      <div class="card">
+        <h2>Tendencia de score (últimos 14 días)</h2>
+        <div id="tendencia"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Calendario de score (últimos 60 días)</h2>
+      <div id="heatmap"></div>
+    </section>
+
+    <section class="card">
+      <h2>Horas trabajadas por día (últimos 30 días)</h2>
+      <div id="barras"></div>
+    </section>
+
+    <section class="card">
+      <h2>Histórico detallado</h2>
+      <div class="table-actions">
+        <button id="exportar-csv">Exportar a CSV</button>
+      </div>
+      <div id="tabla-wrapper"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

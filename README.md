@@ -11,7 +11,7 @@ App de escritorio para Windows que lleva el control de horario laboral de forma 
 - **Inferencia por horario**: si no se responde el popup, el sistema clasifica la pausa solo comparando el horario real contra las ventanas configuradas (ej. almuerzo entre 12:00 y 14:30).
 - **Botones manuales de respaldo**: disponibles en el ícono de la bandeja del sistema para corregir o marcar algo a mano si hace falta.
 - **Calificación semanal (0-100)**: puntualidad de entrada/salida, cumplimiento de almuerzo/merienda, horas trabajadas vs. esperadas, y ratio de actividad real.
-- **Dashboard con métricas**: línea de tiempo diaria, heatmap tipo calendario, tendencia de score semanal, KPIs (horas trabajadas, puntualidad, horas idle, pausas confirmadas vs. inferidas) y export a CSV.
+- **Dashboard con métricas**: línea de tiempo diaria, heatmap tipo calendario, tendencia de score semanal, gráfico de horas trabajadas, KPIs (horas trabajadas, puntualidad, horas idle, pausas confirmadas vs. inferidas) y export a CSV — todo en HTML/CSS/JS sin dependencias externas (sin CDN, sin internet).
 - **Autoarranque**: la app se registra sola para iniciar con el login de Windows y corre en la bandeja del sistema durante toda la jornada.
 - **100% local**: todos los datos se guardan en un archivo SQLite en la propia máquina, sin enviar nada a servidores externos.
 
@@ -68,7 +68,7 @@ El score semanal es el promedio de los scores diarios de los días laborales con
 ## Stack técnico
 
 - Python 3.11+ / [PySide6](https://doc.qt.io/qtforpython/) (Qt) para la bandeja, la configuración y el host del dashboard.
-- `QtWebEngine` para el dashboard (HTML/CSS/JS + Chart.js), embebido y sin depender de internet.
+- `QtWebEngine` para el dashboard (HTML/CSS/JS con gráficos SVG hechos a mano, sin librerías externas ni internet).
 - SQLite (librería estándar) para almacenamiento local.
 - `ctypes` sobre `GetLastInputInfo` (user32.dll) para detección de inactividad.
 - `pywin32` para autoarranque y notificaciones nativas.
@@ -76,16 +76,20 @@ El score semanal es el promedio de los scores diarios de los días laborales con
 
 ## Estado del proyecto / roadmap
 
-- [ ] Capa de datos SQLite
-- [ ] Detección de inactividad y generación automática de entrada/salida
-- [ ] Popup de clasificación de pausas
-- [ ] Clasificador automático por horario configurado
-- [ ] Ícono de bandeja con menú manual de respaldo
-- [ ] Motor de scoring
-- [ ] Ventana de configuración
-- [ ] Dashboard (HTML/JS + Chart.js embebido)
-- [ ] Autoarranque con Windows
-- [ ] Primer `.exe` empaquetado y publicado en Releases
+- [x] Capa de datos SQLite
+- [x] Detección de inactividad y generación automática de entrada/salida
+- [x] Popup de clasificación de pausas
+- [x] Clasificador automático por horario configurado
+- [x] Ícono de bandeja con menú manual de respaldo
+- [x] Motor de scoring
+- [x] Ventana de configuración
+- [x] Dashboard (HTML/JS embebido, sin dependencias externas)
+- [x] Autoarranque con Windows
+- [ ] Probado en una PC Windows real (desarrollado y testeado hasta acá en macOS de forma "offscreen"; falta validar `GetLastInputInfo`, el acceso directo de autoarranque y la experiencia real de la bandeja en Windows)
+- [ ] Primer `.exe` empaquetado con PyInstaller y publicado en Releases
+- [ ] Capturas de pantalla reales
+
+El código completo (lógica de negocio + UI) ya está en `control_horas/`, con pruebas automatizadas (`pytest`) para la capa de datos, el clasificador y el motor de scoring.
 
 ## Privacidad
 
