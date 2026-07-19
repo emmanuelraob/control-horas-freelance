@@ -7,8 +7,8 @@ App de escritorio para Windows que lleva el control de horario laboral de forma 
 ## Características
 
 - **Registro automático**: entrada, salida y pausas se detectan solas por inactividad de mouse/teclado (`GetLastInputInfo` de Windows). No hace falta apretar botones.
-- **Popup de clasificación de pausas**: al superar el umbral de inactividad configurado (5 min por defecto), aparece un aviso no bloqueante con un contador en vivo y botones rápidos (Almuerzo / Merienda / Baño / Otra cosa). Responder es opcional.
-- **Inferencia por horario**: si no se responde el popup, el sistema clasifica la pausa solo comparando el horario real contra las ventanas configuradas (ej. almuerzo entre 12:00 y 14:30).
+- **Popup de clasificación de pausas**: al superar el umbral de inactividad configurado (5 min por defecto), aparece un aviso no bloqueante con un contador en vivo y botones rápidos (Almuerzo / Merienda / Baño / Otra cosa). **No se cierra solo por tiempo** — queda abierto mientras dure la pausa. Responder es opcional, pero cerrarlo a mano (o volver a la compu) es lo que dispara la inferencia automática.
+- **Inferencia por horario**: si el popup se cierra sin elegir nada (a mano, o porque el usuario retoma la actividad), el sistema clasifica la pausa solo comparando el horario real contra las ventanas configuradas (ej. almuerzo entre 12:00 y 14:30).
 - **Botones manuales de respaldo**: disponibles en el ícono de la bandeja del sistema para corregir o marcar algo a mano si hace falta.
 - **Calificación semanal (0-100)**: puntualidad de entrada/salida, cumplimiento de almuerzo/merienda, horas trabajadas vs. esperadas, y ratio de actividad real.
 - **Dashboard con métricas**: línea de tiempo diaria, heatmap tipo calendario, tendencia de score semanal, gráfico de horas trabajadas, KPIs (horas trabajadas, puntualidad, horas idle, pausas confirmadas vs. inferidas) y export a CSV — todo en HTML/CSS/JS sin dependencias externas (sin CDN, sin internet).
@@ -29,7 +29,7 @@ La última versión empaquetada (`.exe` para Windows, no requiere tener Python i
 1. Descargá el `.exe` desde la sección [Descarga](#descarga).
 2. Ejecutalo una vez — se registra automáticamente para iniciar con Windows y queda corriendo en la bandeja del sistema (junto al reloj, abajo a la derecha).
 3. Click derecho en el ícono de la bandeja para configurar tu horario esperado (entrada, salida, ventana de almuerzo, ventanas de merienda) antes del primer uso.
-4. A partir de ahí no hace falta hacer nada más: la app detecta sola entrada, salida y pausas. Cuando te alejás de la compu más del tiempo configurado, aparece un popup opcional para clasificar la pausa.
+4. A partir de ahí no hace falta hacer nada más: la app detecta sola entrada, salida y pausas. Cuando te alejás de la compu más del tiempo configurado, aparece un popup opcional para clasificar la pausa — queda abierto hasta que lo cerrás vos o volvés a la compu; ahí es cuando se clasifica sola por horario si no elegiste nada.
 5. Click en "Ver Dashboard" desde el ícono de la bandeja para ver tus métricas.
 
 ### Opción 2: correr desde el código fuente (desarrollo)

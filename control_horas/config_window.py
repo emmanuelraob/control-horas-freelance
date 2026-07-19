@@ -126,17 +126,18 @@ class ConfigWindow(QDialog):
         self.umbral_idle_spin.setRange(1, 60)
         self.umbral_idle_spin.setSuffix(" min")
         self.umbral_idle_spin.setValue(config.umbral_idle_minutos)
-        self.tiempo_espera_popup_spin = QSpinBox()
-        self.tiempo_espera_popup_spin.setRange(1, 30)
-        self.tiempo_espera_popup_spin.setSuffix(" min")
-        self.tiempo_espera_popup_spin.setValue(config.tiempo_espera_popup_minutos)
         self.pausa_corta_spin = QSpinBox()
         self.pausa_corta_spin.setRange(1, 60)
         self.pausa_corta_spin.setSuffix(" min")
         self.pausa_corta_spin.setValue(config.duracion_maxima_pausa_corta_min)
         form_deteccion.addRow("Inactividad para considerar pausa", self.umbral_idle_spin)
-        form_deteccion.addRow("El popup se autocierra a los", self.tiempo_espera_popup_spin)
         form_deteccion.addRow("Máximo de una pausa corta (ej. baño)", self.pausa_corta_spin)
+        nota = QLabel(
+            "El popup de pausa no se cierra solo: queda abierto hasta que lo cerrás vos "
+            "(ahí se clasifica por horario) o hasta que volvés a usar la compu."
+        )
+        nota.setWordWrap(True)
+        form_deteccion.addRow(nota)
         layout.addWidget(grupo_deteccion)
 
         botones = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
@@ -169,7 +170,6 @@ class ConfigWindow(QDialog):
             duracion_esperada_merienda_min=self.merienda_duracion_spin.value(),
             dias_laborales=[i for i, check in enumerate(self.checks_dias) if check.isChecked()],
             umbral_idle_minutos=self.umbral_idle_spin.value(),
-            tiempo_espera_popup_minutos=self.tiempo_espera_popup_spin.value(),
             duracion_maxima_pausa_corta_min=self.pausa_corta_spin.value(),
         )
         self.configuracion_guardada.emit(nueva_config)

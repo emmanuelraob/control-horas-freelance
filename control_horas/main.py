@@ -100,7 +100,7 @@ class ControlHorasApp:
         db.cerrar_pausa(self.conn, self._pausa_actual_id, fin, clasificacion, origen)
 
         if self._popup_actual is not None:
-            self._popup_actual.close()
+            self._popup_actual.cerrar_por_fin_de_pausa()
             self._popup_actual = None
 
         self._pausa_actual_id = None
@@ -111,9 +111,9 @@ class ControlHorasApp:
     # -------------------------------------------------------------- popup
 
     def _mostrar_popup(self, inicio: datetime) -> None:
-        popup = PausePopup(inicio, self.config.tiempo_espera_popup_minutos)
+        popup = PausePopup(inicio)
         popup.clasificado.connect(self._on_pausa_clasificada_por_usuario)
-        popup.expirado.connect(self._on_popup_expirado)
+        popup.cerrado_sin_clasificar.connect(self._on_popup_cerrado_sin_clasificar)
         popup.show()
         self._popup_actual = popup
 
@@ -121,7 +121,9 @@ class ControlHorasApp:
         self._pausa_actual_clasificacion = clasificacion
         self._popup_actual = None
 
-    def _on_popup_expirado(self) -> None:
+    def _on_popup_cerrado_sin_clasificar(self) -> None:
+        # El usuario cerró el aviso sin elegir nada: la pausa se clasifica
+        # sola por horario cuando termine (ver _on_pausa_terminada).
         self._popup_actual = None
 
     # ------------------------------------------------------- menú manual

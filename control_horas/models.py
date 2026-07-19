@@ -24,7 +24,6 @@ class Config:
     dias_laborales: list[int] = field(default_factory=lambda: [0, 1, 2, 3, 4])  # 0=lunes
 
     umbral_idle_minutos: int = 5
-    tiempo_espera_popup_minutos: int = 2
     duracion_maxima_pausa_corta_min: int = 15
 
 

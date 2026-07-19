@@ -49,7 +49,6 @@ CREATE TABLE IF NOT EXISTS config (
     duracion_esperada_merienda_min INTEGER NOT NULL,
     dias_laborales TEXT NOT NULL,
     umbral_idle_minutos INTEGER NOT NULL,
-    tiempo_espera_popup_minutos INTEGER NOT NULL,
     duracion_maxima_pausa_corta_min INTEGER NOT NULL
 );
 """
@@ -106,7 +105,6 @@ def get_config(conn: sqlite3.Connection) -> Config:
         duracion_esperada_merienda_min=row["duracion_esperada_merienda_min"],
         dias_laborales=json.loads(row["dias_laborales"]),
         umbral_idle_minutos=row["umbral_idle_minutos"],
-        tiempo_espera_popup_minutos=row["tiempo_espera_popup_minutos"],
         duracion_maxima_pausa_corta_min=row["duracion_maxima_pausa_corta_min"],
     )
 
@@ -121,8 +119,8 @@ def save_config(conn: sqlite3.Connection, config: Config) -> None:
             id, entrada_esperada, salida_esperada, tolerancia_minutos,
             ventana_almuerzo_inicio, ventana_almuerzo_fin, duracion_esperada_almuerzo_min,
             ventanas_merienda, duracion_esperada_merienda_min, dias_laborales,
-            umbral_idle_minutos, tiempo_espera_popup_minutos, duracion_maxima_pausa_corta_min
-        ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            umbral_idle_minutos, duracion_maxima_pausa_corta_min
+        ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             entrada_esperada=excluded.entrada_esperada,
             salida_esperada=excluded.salida_esperada,
@@ -134,7 +132,6 @@ def save_config(conn: sqlite3.Connection, config: Config) -> None:
             duracion_esperada_merienda_min=excluded.duracion_esperada_merienda_min,
             dias_laborales=excluded.dias_laborales,
             umbral_idle_minutos=excluded.umbral_idle_minutos,
-            tiempo_espera_popup_minutos=excluded.tiempo_espera_popup_minutos,
             duracion_maxima_pausa_corta_min=excluded.duracion_maxima_pausa_corta_min
         """,
         (
@@ -148,7 +145,6 @@ def save_config(conn: sqlite3.Connection, config: Config) -> None:
             config.duracion_esperada_merienda_min,
             json.dumps(config.dias_laborales),
             config.umbral_idle_minutos,
-            config.tiempo_espera_popup_minutos,
             config.duracion_maxima_pausa_corta_min,
         ),
     )
