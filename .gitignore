@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Datos locales de la app (no versionar horarios/datos personales)
+*.db
+*.sqlite
+*.sqlite3
+
+# Empaquetado
+build/
+dist/
+*.spec
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
