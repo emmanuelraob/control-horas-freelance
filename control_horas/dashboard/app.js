@@ -29,6 +29,20 @@ function svg(tag, attrs = {}) {
   return node;
 }
 
+/* Texto dentro de un SVG (para las marcas de números de los gráficos). */
+function svgText(x, y, texto, attrs = {}) {
+  const node = svg("text", {
+    x,
+    y,
+    "font-size": 9,
+    "font-family": "inherit",
+    fill: "var(--text-muted)",
+    ...attrs,
+  });
+  node.textContent = texto;
+  return node;
+}
+
 function colorForScore(score) {
   if (score === null || score === undefined) return "var(--idle)";
   if (score >= 85) return "var(--good)";
@@ -107,11 +121,6 @@ function renderTimeline(data) {
 
   const track = el("div", { class: "timeline-track" });
 
-  if (!data.pausas_hoy.length) {
-    contenedor.appendChild(el("div", { class: "empty", text: "Todavía no hay pausas registradas hoy." }));
-    return;
-  }
-
   for (const pausa of data.pausas_hoy) {
     const inicio = new Date(pausa.inicio);
     const fin = pausa.fin ? new Date(pausa.fin) : new Date();
@@ -120,7 +129,6 @@ function renderTimeline(data) {
     const left = Math.max(0, ((minInicio - INICIO_TRACK) / totalMin) * 100);
     const width = Math.max(0.6, ((minFin - minInicio) / totalMin) * 100);
     const color = COLOR_PAUSA[pausa.clasificacion] || COLOR_PAUSA.sin_clasificar;
-    const bloque = svg ? null : null; // no-op, mantenemos DOM simple con divs
     const div = el("div", {
       class: "timeline-block",
       title: `${pausa.clasificacion || "sin clasificar"} — ${pausa.duracion_min} min (${pausa.origen || "auto_inferido"})`,
@@ -130,7 +138,47 @@ function renderTimeline(data) {
     div.style.background = color;
     track.appendChild(div);
   }
+
+  // Marcas de entrada y salida de hoy: línea vertical sobre la barra + etiqueta.
+  const marcas = el("div", { class: "timeline-marks" });
+  const hitos = [
+    ["Entrada", data.entrada_hoy, "var(--good)"],
+    ["Salida", data.salida_hoy, "var(--accent)"],
+  ];
+  for (const [nombre, hora, color] of hitos) {
+    if (!hora) continue;
+    const [h, m] = hora.split(":").map(Number);
+    const left = Math.min(100, Math.max(0, ((h * 60 + m - INICIO_TRACK) / totalMin) * 100));
+
+    const linea = el("div", { class: "timeline-marker" });
+    linea.style.left = left + "%";
+    linea.style.background = color;
+    track.appendChild(linea);
+
+    const etiqueta = el("span", { class: "timeline-mark", text: `${nombre} ${hora}` });
+    etiqueta.style.left = left + "%";
+    etiqueta.style.color = color;
+    // Evita que la etiqueta se corte en los bordes de la barra.
+    etiqueta.style.transform = `translateX(${left < 12 ? "0" : left > 88 ? "-100%" : "-50%"})`;
+    marcas.appendChild(etiqueta);
+  }
+  contenedor.appendChild(marcas);
   contenedor.appendChild(track);
+
+  // Eje de horas con marcas de números (cada 2 horas, de 06:00 a 22:00).
+  const eje = el("div", { class: "timeline-axis" });
+  for (let min = INICIO_TRACK; min <= FIN_TRACK; min += 120) {
+    const left = ((min - INICIO_TRACK) / totalMin) * 100;
+    const hora = String(Math.floor(min / 60)).padStart(2, "0") + ":00";
+    const marca = el("span", { class: "timeline-tick", text: hora });
+    marca.style.left = left + "%";
+    eje.appendChild(marca);
+  }
+  contenedor.appendChild(eje);
+
+  if (!data.pausas_hoy.length) {
+    contenedor.appendChild(el("div", { class: "empty", text: "Todavía no hay pausas registradas hoy." }));
+  }
 
   const leyenda = el("div", { class: "timeline-legend" });
   for (const [clave, color] of Object.entries(COLOR_PAUSA)) {
@@ -154,23 +202,41 @@ function renderTendencia(data) {
   }
 
   const w = 480;
-  const h = 140;
-  const pad = 20;
-  const lienzo = svg("svg", { width: "100%", viewBox: `0 0 ${w} ${h}`, preserveAspectRatio: "none" });
+  const h = 150;
+  const padX = 26;
+  const padY = 24;
+  const lienzo = svg("svg", { width: "100%", viewBox: `0 0 ${w} ${h}` });
+
+  const yPara = (score) => h - padY - (score / 100) * (h - padY * 2);
+
+  // Eje Y: líneas guía y marcas de números (0 / 50 / 100).
+  for (const marca of [0, 50, 100]) {
+    const y = yPara(marca);
+    lienzo.appendChild(
+      svg("line", { x1: padX, y1: y, x2: w - padX, y2: y, stroke: "var(--border)", "stroke-width": "1" })
+    );
+    lienzo.appendChild(svgText(padX - 6, y + 3, String(marca), { "text-anchor": "end" }));
+  }
 
   const puntos = dias.map((d, i) => {
-    const x = pad + (i / Math.max(1, dias.length - 1)) * (w - pad * 2);
-    const y = h - pad - ((d.score ?? 0) / 100) * (h - pad * 2);
+    const x = padX + (i / Math.max(1, dias.length - 1)) * (w - padX * 2);
+    const y = yPara(d.score ?? 0);
     return [x, y, d];
   });
 
-  const linea = puntos.map(([x, y]) => `${x},${y}`).join(" ");
+  const conScore = puntos.filter(([, , d]) => d.score !== null && d.score !== undefined);
+  const linea = conScore.map(([x, y]) => `${x},${y}`).join(" ");
   lienzo.appendChild(svg("polyline", { points: linea, fill: "none", stroke: "var(--accent)", "stroke-width": "2" }));
 
   for (const [x, y, d] of puntos) {
+    if (d.score === null || d.score === undefined) continue;
     const c = svg("circle", { cx: x, cy: y, r: 4, fill: colorForScore(d.score) });
     c.appendChild(el("title", { text: `${d.fecha}: ${d.score ?? "sin datos"}` }));
     lienzo.appendChild(c);
+    // Marca de número: el score arriba de cada punto.
+    lienzo.appendChild(
+      svgText(x, y - 8, d.score.toFixed(0), { "text-anchor": "middle", fill: "var(--text)", "font-weight": "600" })
+    );
   }
 
   contenedor.appendChild(lienzo);
@@ -197,17 +263,34 @@ function renderBarras(data) {
     return;
   }
 
-  const w = Math.max(600, dias.length * 22);
-  const h = 160;
-  const pad = 20;
+  const w = Math.max(600, dias.length * 26);
+  const h = 190;
+  const padX = 30;
+  const padTop = 22;
+  const padBottom = 26; // espacio para las marcas de día abajo
   const maxHoras = Math.max(1, ...dias.map((d) => d.horas_trabajadas || 0));
   const lienzo = svg("svg", { width: "100%", viewBox: `0 0 ${w} ${h}` });
 
-  const anchoBarra = (w - pad * 2) / dias.length - 4;
+  const alturaUtil = h - padTop - padBottom;
+  const yBase = h - padBottom;
+
+  // Eje Y: líneas guía y marcas de horas (0 / mitad / máximo).
+  for (const marca of [0, maxHoras / 2, maxHoras]) {
+    const y = yBase - (marca / maxHoras) * alturaUtil;
+    lienzo.appendChild(
+      svg("line", { x1: padX, y1: y, x2: w - padX, y2: y, stroke: "var(--border)", "stroke-width": "1" })
+    );
+    lienzo.appendChild(svgText(padX - 6, y + 3, marca.toFixed(1) + "h", { "text-anchor": "end" }));
+  }
+
+  const paso = (w - padX * 2) / dias.length;
+  const anchoBarra = paso - 6;
   dias.forEach((d, i) => {
-    const alto = ((d.horas_trabajadas || 0) / maxHoras) * (h - pad * 2);
-    const x = pad + i * ((w - pad * 2) / dias.length);
-    const y = h - pad - alto;
+    const horas = d.horas_trabajadas || 0;
+    const alto = (horas / maxHoras) * alturaUtil;
+    const x = padX + i * paso;
+    const centro = x + anchoBarra / 2;
+    const y = yBase - alto;
     const barra = svg("rect", {
       x,
       y,
@@ -218,6 +301,16 @@ function renderBarras(data) {
     });
     barra.appendChild(el("title", { text: `${d.fecha}: ${d.horas_trabajadas}h trabajadas` }));
     lienzo.appendChild(barra);
+    // Marca de número: horas trabajadas arriba de la barra.
+    if (horas > 0) {
+      lienzo.appendChild(
+        svgText(centro, y - 4, horas.toFixed(1), { "text-anchor": "middle", fill: "var(--text)", "font-size": 8 })
+      );
+    }
+    // Marca de día (número del día del mes) abajo del eje.
+    lienzo.appendChild(
+      svgText(centro, h - 8, d.fecha.slice(-2), { "text-anchor": "middle", "font-size": 8 })
+    );
   });
 
   contenedor.appendChild(lienzo);

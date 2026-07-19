@@ -44,13 +44,27 @@ python control_horas/main.py
 
 Requiere Windows (usa APIs nativas de `user32.dll` para detectar inactividad) y Python 3.11+.
 
+### Compilar el `.exe`
+
+El empaquetado usa PyInstaller en modo **onedir** (una carpeta con el `.exe` y sus dependencias):
+
+```bash
+pyinstaller ControlHorasFreelance.spec
+```
+
+El resultado queda en `dist/ControlHorasFreelance/ControlHorasFreelance.exe`.
+
+> ⚠️ El dashboard usa Qt WebEngine, que **no** funciona de forma fiable en modo *onefile* en Windows (el subproceso `QtWebEngineProcess` no encuentra sus recursos y el dashboard queda en blanco). Por eso el `.spec` está configurado en *onedir* y con UPX desactivado. La carpeta `dist/` completa es lo que se distribuye (o se comprime para publicar en Releases).
+
 ## Capturas de pantalla
 
-*(Se agregan a medida que las pantallas estén implementadas.)*
+### Dashboard
 
-| Bandeja del sistema | Popup de pausa | Dashboard |
+![Dashboard](img/dashboard.png)
+
+| Menú de la bandeja | Popup de pausa | Configuración |
 |---|---|---|
-| _pendiente_ | _pendiente_ | _pendiente_ |
+| ![Menú de bandeja](img/menu-bandeja.png) | ![Popup de pausa](img/popup-pausa.png) | ![Configuración](img/configuracion.png) |
 
 ## Cómo funciona la calificación (0-100)
 
@@ -86,8 +100,9 @@ El score semanal es el promedio de los scores diarios de los días laborales con
 - [x] Dashboard (HTML/JS embebido, sin dependencias externas)
 - [x] Autoarranque con Windows
 - [ ] Probado en una PC Windows real (desarrollado y testeado hasta acá en macOS de forma "offscreen"; falta validar `GetLastInputInfo`, el acceso directo de autoarranque y la experiencia real de la bandeja en Windows)
-- [ ] Primer `.exe` empaquetado con PyInstaller y publicado en Releases
-- [ ] Capturas de pantalla reales
+- [x] Empaquetado con PyInstaller (modo onedir, compatible con Qt WebEngine)
+- [ ] Primer `.exe` publicado en Releases
+- [x] Capturas de pantalla reales
 
 El código completo (lógica de negocio + UI) ya está en `control_horas/`, con pruebas automatizadas (`pytest`) para la capa de datos, el clasificador y el motor de scoring.
 

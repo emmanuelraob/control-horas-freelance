@@ -15,7 +15,9 @@ def conn():
 
 def test_config_por_defecto_se_crea_sola(conn):
     config = db.get_config(conn)
-    assert config.entrada_esperada == time(9, 0)
+    assert config.entrada_esperada == time(6, 0)
+    assert config.salida_esperada == time(15, 15)
+    assert config.duracion_esperada_almuerzo_min == 0
     assert config.dias_laborales == [0, 1, 2, 3, 4]
 
 

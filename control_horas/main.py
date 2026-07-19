@@ -10,6 +10,7 @@ from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 
 from control_horas import autostart, db
+from control_horas import instancia_unica
 from control_horas.classifier import clasificar_pausa
 from control_horas.config_window import ConfigWindow
 from control_horas.dashboard.window import DashboardWindow
@@ -23,7 +24,7 @@ INTERVALO_RECALCULO_RESUMEN_MS = 10 * 60 * 1000  # 10 minutos
 
 
 class ControlHorasApp:
-    def __init__(self, app: QApplication):
+    def __init__(self, app: QApplication, candado: instancia_unica.Candado):
         self.app = app
         self.conn = db.connect()
         self.config: Config = db.get_config(self.conn)
@@ -41,6 +42,11 @@ class ControlHorasApp:
         self.tray.configuracion_solicitada.connect(self._mostrar_configuracion)
         self.tray.salir_solicitado.connect(self._salir)
         self.tray.show()
+
+        # Cuando alguien intenta abrir una segunda copia, en vez de arrancar
+        # otra instancia nos avisa por acá y traemos el dashboard al frente.
+        self._candado = candado
+        self._candado.vigilar_pedidos_de_mostrar(self._mostrar_dashboard)
 
         self.idle_detector = IdleDetector(self.config.umbral_idle_minutos * 60)
         self.idle_detector.actividad_detectada.connect(self._on_actividad)
@@ -71,7 +77,17 @@ class ControlHorasApp:
             self.tray.notificar("Entrada registrada", f"Se marcó tu entrada a las {ts.strftime('%H:%M')}.")
             self._recalcular_resumen_hoy()
 
+    def _hay_salida_manual_hoy(self, fecha: date) -> bool:
+        return any(
+            e.tipo == "salida" and e.origen == "manual" for e in db.eventos_del_dia(self.conn, fecha)
+        )
+
     def _on_pausa_iniciada(self, inicio: datetime) -> None:
+        if self._hay_salida_manual_hoy(inicio.date()):
+            # Ya marcaste la salida a mano: la jornada terminó, así que no
+            # registramos más pausas (ni las contamos) por el resto del día.
+            return
+
         self._pausa_actual_id = db.iniciar_pausa(self.conn, inicio)
         self._pausa_actual_clasificacion = None
         self.tray.actualizar_estado(f"pausa desde {inicio.strftime('%H:%M')}")
@@ -180,7 +196,15 @@ class ControlHorasApp:
 def main() -> None:
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
-    ControlHorasApp(app)
+
+    candado = instancia_unica.intentar_adquirir()
+    if candado is None:
+        # Ya hay una copia corriendo: le pedimos que muestre el dashboard y
+        # esta copia se cierra sin abrir una segunda instancia.
+        instancia_unica.avisar_mostrar_dashboard()
+        return
+
+    ControlHorasApp(app, candado)
     sys.exit(app.exec())
 
 

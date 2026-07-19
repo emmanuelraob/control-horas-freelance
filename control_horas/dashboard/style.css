@@ -114,8 +114,20 @@ th { color: var(--text-muted); font-weight: 600; }
   color: white;
 }
 
-.timeline-track { position: relative; height: 46px; background: var(--idle); border-radius: 6px; margin-bottom: 8px; }
+.timeline-track { position: relative; height: 46px; background: var(--idle); border-radius: 6px; margin-bottom: 4px; }
 .timeline-block { position: absolute; top: 0; height: 100%; border-radius: 6px; }
+.timeline-marks { position: relative; height: 16px; margin-bottom: 4px; }
+.timeline-mark { position: absolute; top: 0; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.timeline-marker { position: absolute; top: 0; width: 2px; height: 100%; z-index: 2; border-radius: 1px; }
+.timeline-axis { position: relative; height: 16px; margin-bottom: 10px; }
+.timeline-tick {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
 .timeline-legend { display: flex; gap: 14px; font-size: 12px; color: var(--text-muted); flex-wrap: wrap; }
 .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: middle; }
 

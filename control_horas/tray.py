@@ -57,6 +57,17 @@ class SystemTray(QSystemTrayIcon):
 
         self.setContextMenu(menu)
 
+        # Doble clic (o clic simple) sobre el ícono abre el dashboard directo,
+        # sin tener que buscar la opción dentro del menú de clic derecho.
+        self.activated.connect(self._on_activado)
+
+    def _on_activado(self, motivo: QSystemTrayIcon.ActivationReason) -> None:
+        if motivo in (
+            QSystemTrayIcon.ActivationReason.DoubleClick,
+            QSystemTrayIcon.ActivationReason.Trigger,
+        ):
+            self.dashboard_solicitado.emit()
+
     def actualizar_estado(self, texto: str) -> None:
         self.setToolTip(f"Control de Horas — {texto}")
 

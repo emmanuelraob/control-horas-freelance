@@ -23,6 +23,11 @@ class DashboardWindow(QWidget):
         self.setWindowTitle("Dashboard — Control de Horas")
         self.resize(1150, 780)
         self._conn = conn
+        # La página web se carga de forma asíncrona; hasta que no termine, la
+        # función window.renderDashboard() todavía no existe. Con esta bandera
+        # evitamos inyectar datos antes de tiempo (si no, salta un error de JS
+        # y el dashboard puede quedar en blanco un instante).
+        self._pagina_cargada = False
 
         self._view = QWebEngineView(self)
         layout = QVBoxLayout(self)
@@ -33,6 +38,7 @@ class DashboardWindow(QWidget):
         self._view.load(QUrl.fromLocalFile(str(RUTA_HTML)))
 
     def _on_load_finished(self, ok: bool) -> None:
+        self._pagina_cargada = ok
         if ok:
             self.actualizar()
 
@@ -41,6 +47,10 @@ class DashboardWindow(QWidget):
         self.actualizar()
 
     def actualizar(self) -> None:
+        if not self._pagina_cargada:
+            # Todavía no cargó el HTML/JS; cuando termine, _on_load_finished
+            # vuelve a llamar a actualizar() con los datos frescos.
+            return
         datos = self._recolectar_datos()
         script = f"window.renderDashboard({json.dumps(datos)});"
         self._view.page().runJavaScript(script)

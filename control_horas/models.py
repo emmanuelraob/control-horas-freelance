@@ -8,13 +8,16 @@ from typing import Optional
 
 @dataclass
 class Config:
-    entrada_esperada: time = time(9, 0)
-    salida_esperada: time = time(18, 0)
+    entrada_esperada: time = time(6, 0)
+    salida_esperada: time = time(15, 15)
     tolerancia_minutos: int = 10
 
     ventana_almuerzo_inicio: time = time(12, 0)
     ventana_almuerzo_fin: time = time(14, 30)
-    duracion_esperada_almuerzo_min: int = 60
+    # 0 = la jornada no incluye almuerzo: no se descuenta de las horas
+    # esperadas ni se penaliza en el score (ver scoring._segundos_esperados_jornada
+    # y score_duracion_pausa).
+    duracion_esperada_almuerzo_min: int = 0
 
     ventanas_merienda: list[tuple[time, time]] = field(
         default_factory=lambda: [(time(9, 30), time(10, 0))]
