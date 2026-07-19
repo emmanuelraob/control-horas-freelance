@@ -30,7 +30,11 @@ class SystemTray(QSystemTrayIcon):
         super().__init__(icono, parent)
         self.setToolTip("Control de Horas — sin marcar (automático)")
 
+        # Qt no toma propiedad del menú en setContextMenu(): si no lo
+        # retenemos acá, Python puede recolectarlo como basura y el menú
+        # queda incompleto o deja de responder.
         menu = QMenu()
+        self._menu = menu
 
         accion_entrada = menu.addAction("Marcar entrada (manual)")
         accion_entrada.triggered.connect(self.entrada_manual_solicitada.emit)

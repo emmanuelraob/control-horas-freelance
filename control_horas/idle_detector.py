@@ -1,10 +1,11 @@
-"""Detección de inactividad de mouse/teclado usando la API nativa de Windows
-`GetLastInputInfo` (user32.dll), sin interceptar qué tecla se presiona ni el
-contenido de pantalla — solo el instante del último input.
+"""Detección de inactividad de mouse/teclado.
 
-Solo funciona en Windows. `segundos_inactivo()` es la única función que toca
-`ctypes.windll`, así el resto del módulo se puede importar (y el resto de la
-app testear) en cualquier plataforma.
+En Windows (producción) usa la API nativa `GetLastInputInfo` (user32.dll):
+solo lee el instante del último input, sin interceptar qué tecla se
+presiona ni el contenido de pantalla. En macOS usa el equivalente de
+Quartz (`CGEventSourceSecondsSinceLastEventType`) — el mismo tipo de API,
+de solo lectura — únicamente para poder desarrollar y probar la app sin
+tener una PC Windows a mano; la app en producción corre en Windows.
 """
 from __future__ import annotations
 
@@ -21,15 +22,33 @@ class LASTINPUTINFO(ctypes.Structure):
 
 def segundos_inactivo() -> float:
     """Segundos transcurridos desde el último movimiento de mouse o tecla."""
-    if sys.platform != "win32":
-        raise RuntimeError("segundos_inactivo() solo funciona en Windows")
+    if sys.platform == "win32":
+        return _segundos_inactivo_windows()
+    if sys.platform == "darwin":
+        return _segundos_inactivo_macos()
+    raise RuntimeError(f"Detección de inactividad no soportada en {sys.platform!r}")
 
+
+def _segundos_inactivo_windows() -> float:
     info = LASTINPUTINFO()
     info.cbSize = ctypes.sizeof(LASTINPUTINFO)
     if not ctypes.windll.user32.GetLastInputInfo(ctypes.byref(info)):  # type: ignore[attr-defined]
         raise OSError("GetLastInputInfo falló")
     millis_desde_boot = ctypes.windll.kernel32.GetTickCount()  # type: ignore[attr-defined]
     return max(0.0, (millis_desde_boot - info.dwTime) / 1000.0)
+
+
+def _segundos_inactivo_macos() -> float:
+    from Quartz import (  # pyobjc-framework-Quartz; solo se instala/usa en macOS
+        CGEventSourceSecondsSinceLastEventType,
+        kCGAnyInputEventType,
+        kCGEventSourceStateCombinedSessionState,
+    )
+
+    return max(
+        0.0,
+        CGEventSourceSecondsSinceLastEventType(kCGEventSourceStateCombinedSessionState, kCGAnyInputEventType),
+    )
 
 
 class IdleDetector(QObject):
