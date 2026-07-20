@@ -38,6 +38,60 @@ def _segundos_inactivo_windows() -> float:
     return max(0.0, (millis_desde_boot - info.dwTime) / 1000.0)
 
 
+def hora_inicio_sesion() -> datetime | None:
+    """Instante en que arrancó la sesión de trabajo actual en la máquina: la
+    hora de inicio de sesión interactiva del usuario y, si no se puede obtener,
+    la hora de encendido del equipo. Sirve para deducir la "primera hora de uso"
+    cuando la app arranca tarde (ya estabas usando la compu). Devuelve None
+    fuera de Windows o si no se pudo determinar."""
+    if sys.platform != "win32":
+        return None
+    logon = _hora_logon_interactivo_windows()
+    if logon is not None:
+        return logon
+    return _hora_encendido_windows()
+
+
+def _hora_encendido_windows() -> datetime | None:
+    try:
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        kernel32.GetTickCount64.restype = ctypes.c_ulonglong
+        millis_uptime = kernel32.GetTickCount64()
+        return datetime.now() - timedelta(milliseconds=millis_uptime)
+    except Exception:
+        return None
+
+
+def _hora_logon_interactivo_windows() -> datetime | None:
+    """Hora del inicio de sesión interactivo más reciente (LogonType 2/10/11),
+    leída con la API de seguridad de Windows (solo lectura)."""
+    try:
+        import win32security  # de pywin32, solo disponible en Windows
+    except Exception:
+        return None
+    try:
+        mejor: datetime | None = None
+        for luid in win32security.LsaEnumerateLogonSessions():
+            try:
+                data = win32security.LsaGetLogonSessionData(luid)
+            except Exception:
+                continue
+            if not data or data.get("LogonType") not in (2, 10, 11):
+                continue  # 2 Interactive, 10 RemoteInteractive, 11 CachedInteractive
+            marca = data.get("LogonTime")
+            if not marca:
+                continue
+            try:
+                dt = datetime.fromtimestamp(int(marca))
+            except (ValueError, OSError, OverflowError):
+                continue
+            if mejor is None or dt > mejor:
+                mejor = dt
+        return mejor
+    except Exception:
+        return None
+
+
 def _segundos_inactivo_macos() -> float:
     from Quartz import (  # pyobjc-framework-Quartz; solo se instala/usa en macOS
         CGEventSourceSecondsSinceLastEventType,

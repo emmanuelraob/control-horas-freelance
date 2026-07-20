@@ -14,7 +14,7 @@ from control_horas import instancia_unica
 from control_horas.classifier import clasificar_pausa
 from control_horas.config_window import ConfigWindow
 from control_horas.dashboard.window import DashboardWindow
-from control_horas.idle_detector import IdleDetector
+from control_horas.idle_detector import IdleDetector, hora_inicio_sesion
 from control_horas.models import Config
 from control_horas.pause_popup import PausePopup
 from control_horas.summary import recalcular_resumen_dia
@@ -48,6 +48,11 @@ class ControlHorasApp:
         self._candado = candado
         self._candado.vigilar_pedidos_de_mostrar(self._mostrar_dashboard)
 
+        # Si la app arrancó tarde (ya venías usando la compu), deja marcada la
+        # entrada con la hora de inicio de sesión de Windows antes de que la
+        # detección de actividad la registre en un momento posterior.
+        self._backfill_entrada_por_sesion()
+
         self.idle_detector = IdleDetector(self.config.umbral_idle_minutos * 60)
         self.idle_detector.actividad_detectada.connect(self._on_actividad)
         self.idle_detector.pausa_iniciada.connect(self._on_pausa_iniciada)
@@ -76,6 +81,26 @@ class ControlHorasApp:
             self.tray.actualizar_estado(f"trabajando desde {ts.strftime('%H:%M')}")
             self.tray.notificar("Entrada registrada", f"Se marcó tu entrada a las {ts.strftime('%H:%M')}.")
             self._recalcular_resumen_hoy()
+
+    def _backfill_entrada_por_sesion(self) -> None:
+        """Marca la entrada con la hora de inicio de sesión de Windows si hoy es
+        día laboral, todavía no hay entrada registrada y esa sesión empezó hoy.
+        Cubre el caso de que la app arranque después de que ya usabas la compu."""
+        hoy = date.today()
+        if hoy.weekday() not in self.config.dias_laborales:
+            return
+        if any(e.tipo == "entrada" for e in db.eventos_del_dia(self.conn, hoy)):
+            return
+        inicio = hora_inicio_sesion()
+        ahora = datetime.now()
+        if inicio is None or inicio.date() != hoy or inicio > ahora:
+            # No se pudo determinar, la sesión empezó otro día (compu encendida
+            # de antes) o la hora es futura: dejamos que la detección normal de
+            # actividad registre la entrada más adelante.
+            return
+        db.registrar_evento(self.conn, "entrada", origen="auto_sesion", timestamp=inicio)
+        self.tray.actualizar_estado(f"trabajando desde {inicio.strftime('%H:%M')}")
+        self._recalcular_resumen_hoy()
 
     def _hay_salida_manual_hoy(self, fecha: date) -> bool:
         return any(

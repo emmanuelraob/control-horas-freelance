@@ -99,9 +99,9 @@ El score semanal es el promedio de los scores diarios de los días laborales con
 - [x] Ventana de configuración
 - [x] Dashboard (HTML/JS embebido, sin dependencias externas)
 - [x] Autoarranque con Windows
-- [ ] Probado en una PC Windows real (desarrollado y testeado hasta acá en macOS de forma "offscreen"; falta validar `GetLastInputInfo`, el acceso directo de autoarranque y la experiencia real de la bandeja en Windows)
+- [x] Probado en una PC Windows real (desarrollado y testeado hasta acá en macOS de forma "offscreen"; falta validar `GetLastInputInfo`, el acceso directo de autoarranque y la experiencia real de la bandeja en Windows)
 - [x] Empaquetado con PyInstaller (modo onedir, compatible con Qt WebEngine)
-- [ ] Primer `.exe` publicado en Releases
+- [x] Primer `.exe` publicado en Releases
 - [x] Capturas de pantalla reales
 
 El código completo (lógica de negocio + UI) ya está en `control_horas/`, con pruebas automatizadas (`pytest`) para la capa de datos, el clasificador y el motor de scoring.

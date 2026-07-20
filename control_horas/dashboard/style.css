@@ -116,6 +116,7 @@ th { color: var(--text-muted); font-weight: 600; }
 
 .timeline-track { position: relative; height: 46px; background: var(--idle); border-radius: 6px; margin-bottom: 4px; }
 .timeline-block { position: absolute; top: 0; height: 100%; border-radius: 6px; }
+.timeline-active { background: var(--good); }
 .timeline-marks { position: relative; height: 16px; margin-bottom: 4px; }
 .timeline-mark { position: absolute; top: 0; font-size: 11px; font-weight: 600; white-space: nowrap; }
 .timeline-marker { position: absolute; top: 0; width: 2px; height: 100%; z-index: 2; border-radius: 1px; }

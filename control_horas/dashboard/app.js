@@ -69,9 +69,10 @@ function renderKPIs(data) {
   contenedor.innerHTML = "";
 
   const dias = data.dias;
-  const ultimos7 = dias.slice(-7);
-  const horasSemana = ultimos7.reduce((acc, d) => acc + (d.horas_trabajadas || 0), 0);
-  const idleSemana = ultimos7.reduce((acc, d) => acc + (d.horas_idle || 0), 0);
+  // Cálculos de semana: solo los días laborales de la semana en curso (lunes→hoy).
+  const diasSemana = dias.filter((d) => d.laboral && d.semana_actual);
+  const horasSemana = diasSemana.reduce((acc, d) => acc + (d.horas_trabajadas || 0), 0);
+  const idleSemana = diasSemana.reduce((acc, d) => acc + (d.horas_idle || 0), 0);
   const scoresValidos = dias.filter((d) => d.score !== null);
   const mejor = scoresValidos.reduce((a, b) => (b.score > (a?.score ?? -1) ? b : a), null);
   const peor = scoresValidos.reduce((a, b) => (b.score < (a?.score ?? 101) ? b : a), null);
@@ -80,8 +81,8 @@ function renderKPIs(data) {
 
   const tarjetas = [
     ["Score semanal", data.score_semanal !== null ? data.score_semanal.toFixed(0) : "—", colorForScore(data.score_semanal)],
-    ["Horas trabajadas (7 días)", horasSemana.toFixed(1) + "h", null],
-    ["Horas idle (7 días)", idleSemana.toFixed(1) + "h", null],
+    ["Horas trabajadas (esta semana)", horasSemana.toFixed(1) + "h", null],
+    ["Horas idle (esta semana)", idleSemana.toFixed(1) + "h", null],
     ["Entrada promedio", promedioHora(dias.map((d) => d.entrada)), null],
     ["Salida promedio", promedioHora(dias.map((d) => d.salida)), null],
     ["Mejor día", mejor ? `${mejor.fecha} (${mejor.score})` : "—", null],
@@ -120,6 +121,62 @@ function renderTimeline(data) {
   const totalMin = FIN_TRACK - INICIO_TRACK;
 
   const track = el("div", { class: "timeline-track" });
+
+  // Convierte minutos-del-día a una posición 0–100% dentro de la barra.
+  const aPct = (min) => ((min - INICIO_TRACK) / totalMin) * 100;
+  const minAHora = (min) => {
+    const h = Math.floor(min / 60).toString().padStart(2, "0");
+    const m = Math.round(min % 60).toString().padStart(2, "0");
+    return `${h}:${m}`;
+  };
+
+  // Tramos activos (verde): desde la entrada hasta la salida —o "ahora" si el
+  // usuario sigue trabajando— restando las pausas. Lo que queda es tiempo activo.
+  if (data.entrada_hoy) {
+    const [eh, em] = data.entrada_hoy.split(":").map(Number);
+    const inicioTrabajo = eh * 60 + em;
+    let finTrabajo;
+    if (data.salida_hoy) {
+      const [sh, sm] = data.salida_hoy.split(":").map(Number);
+      finTrabajo = sh * 60 + sm;
+    } else {
+      const ahora = new Date();
+      finTrabajo = ahora.getHours() * 60 + ahora.getMinutes();
+    }
+
+    // Intervalos de pausa (en minutos), recortados a la jornada y ordenados.
+    const intervalosPausa = data.pausas_hoy
+      .map((p) => {
+        const ini = new Date(p.inicio);
+        const fin = p.fin ? new Date(p.fin) : new Date();
+        return [ini.getHours() * 60 + ini.getMinutes(), fin.getHours() * 60 + fin.getMinutes()];
+      })
+      .filter(([a, b]) => b > inicioTrabajo && a < finTrabajo)
+      .map(([a, b]) => [Math.max(a, inicioTrabajo), Math.min(b, finTrabajo)])
+      .sort((x, y) => x[0] - y[0]);
+
+    // Resta las pausas al rango [inicioTrabajo, finTrabajo] → tramos activos.
+    let cursor = inicioTrabajo;
+    const tramosActivos = [];
+    for (const [pIni, pFin] of intervalosPausa) {
+      if (pIni > cursor) tramosActivos.push([cursor, pIni]);
+      cursor = Math.max(cursor, pFin);
+    }
+    if (cursor < finTrabajo) tramosActivos.push([cursor, finTrabajo]);
+
+    for (const [ini, fin] of tramosActivos) {
+      const iniVis = Math.max(ini, INICIO_TRACK);
+      const finVis = Math.min(fin, FIN_TRACK);
+      if (finVis <= iniVis) continue;
+      const bloque = el("div", {
+        class: "timeline-block timeline-active",
+        title: `Activo — ${minAHora(ini)} a ${minAHora(fin)} (${Math.round(fin - ini)} min)`,
+      });
+      bloque.style.left = aPct(iniVis) + "%";
+      bloque.style.width = Math.max(0.4, aPct(finVis) - aPct(iniVis)) + "%";
+      track.appendChild(bloque);
+    }
+  }
 
   for (const pausa of data.pausas_hoy) {
     const inicio = new Date(pausa.inicio);
@@ -181,6 +238,12 @@ function renderTimeline(data) {
   }
 
   const leyenda = el("div", { class: "timeline-legend" });
+  leyenda.appendChild(
+    el("span", {}, [
+      el("span", { class: "legend-dot", style: "background:var(--good)" }),
+      document.createTextNode("activo"),
+    ])
+  );
   for (const [clave, color] of Object.entries(COLOR_PAUSA)) {
     leyenda.appendChild(
       el("span", {}, [

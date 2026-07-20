@@ -12,6 +12,7 @@ from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from control_horas import db
 from control_horas.scoring import calcular_score_semana
+from control_horas.summary import calcular_entrada_efectiva
 
 RUTA_HTML = Path(__file__).parent / "index.html"
 DIAS_HISTORIAL = 60
@@ -59,6 +60,10 @@ class DashboardWindow(QWidget):
         hoy = date.today()
         desde = hoy - timedelta(days=DIAS_HISTORIAL - 1)
         resumenes = db.resumenes_rango(self._conn, desde, hoy)
+        config = db.get_config(self._conn)
+        # Lunes de la semana en curso (weekday(): 0=lunes). Los cálculos de
+        # semana toman solo desde este día en adelante.
+        inicio_semana = hoy - timedelta(days=hoy.weekday())
 
         dias = [
             {
@@ -71,6 +76,11 @@ class DashboardWindow(QWidget):
                 "duracion_merienda_min": round(r.duracion_merienda_seg / 60),
                 "score": r.score,
                 "flags": r.flags,
+                # Día marcado como laboral en la configuración (0=lunes). Los
+                # cálculos de semana solo cuentan estos días.
+                "laboral": date.fromisoformat(r.fecha).weekday() in config.dias_laborales,
+                # ¿El día cae en la semana en curso (de lunes en adelante)?
+                "semana_actual": date.fromisoformat(r.fecha) >= inicio_semana,
             }
             for r in resumenes
         ]
@@ -88,8 +98,13 @@ class DashboardWindow(QWidget):
         ]
 
         eventos_hoy = db.eventos_del_dia(self._conn, hoy)
+        entrada_efectiva = calcular_entrada_efectiva(eventos_hoy, pausas_hoy)
 
-        ultimos_7 = [d["score"] for d in dias[-7:] if d["score"] is not None]
+        # El score semanal promedia solo los días laborales de la semana en
+        # curso (de lunes al día de hoy).
+        scores_semana = [
+            d["score"] for d in dias if d["score"] is not None and d["laboral"] and d["semana_actual"]
+        ]
         todas_las_pausas_recientes = [
             p for r in resumenes for p in db.pausas_del_dia(self._conn, date.fromisoformat(r.fecha))
         ]
@@ -99,9 +114,9 @@ class DashboardWindow(QWidget):
         return {
             "dias": dias,
             "pausas_hoy": pausas_serializadas,
-            "entrada_hoy": next((e.timestamp.strftime("%H:%M") for e in eventos_hoy if e.tipo == "entrada"), None),
+            "entrada_hoy": entrada_efectiva.strftime("%H:%M") if entrada_efectiva else None,
             "salida_hoy": next((e.timestamp.strftime("%H:%M") for e in eventos_hoy if e.tipo == "salida"), None),
-            "score_semanal": calcular_score_semana(ultimos_7) if ultimos_7 else None,
+            "score_semanal": calcular_score_semana(scores_semana) if scores_semana else None,
             "pausas_confirmadas": confirmadas,
             "pausas_inferidas": inferidas,
         }

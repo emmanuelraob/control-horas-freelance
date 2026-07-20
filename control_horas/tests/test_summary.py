@@ -49,6 +49,22 @@ def test_jornada_completa_con_almuerzo(conn):
     assert guardado.score == resumen.score
 
 
+def test_sin_entrada_usa_primera_hora_de_uso(conn):
+    """Si no hay evento de entrada, la entrada cae a la primera hora de uso
+    de la compu ese día (inicio de la primera pausa registrada)."""
+    fecha = date(2026, 7, 20)
+
+    pausa_id = db.iniciar_pausa(conn, datetime(2026, 7, 20, 10, 30))
+    db.cerrar_pausa(conn, pausa_id, datetime(2026, 7, 20, 10, 45), clasificacion="baño")
+    pausa2 = db.iniciar_pausa(conn, datetime(2026, 7, 20, 13, 0))
+    db.cerrar_pausa(conn, pausa2, datetime(2026, 7, 20, 13, 30), clasificacion="almuerzo")
+
+    resumen = recalcular_resumen_dia(conn, fecha, _config())
+
+    assert resumen.entrada == datetime(2026, 7, 20, 10, 30)
+    assert resumen.score is not None
+
+
 def test_pausa_sin_clasificar_cuenta_como_idle(conn):
     fecha = date(2026, 7, 20)
     db.registrar_evento(conn, "entrada", timestamp=datetime(2026, 7, 20, 9, 0))

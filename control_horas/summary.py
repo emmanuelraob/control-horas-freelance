@@ -11,13 +11,25 @@ from control_horas.scoring import calcular_score_dia
 SIN_CLASIFICAR_COMO_IDLE = {None, "sin_clasificar"}
 
 
+def calcular_entrada_efectiva(eventos, pausas):
+    """Hora de entrada del día. Si hay un evento de entrada (manual o auto), se
+    usa ese. Si no, se cae a la primera hora de uso de la compu ese día:
+    el inicio de la primera pausa registrada (que implica que el usuario ya
+    estaba usando la máquina antes). Devuelve None si no hay ninguna señal."""
+    entrada = next((e.timestamp for e in eventos if e.tipo == "entrada"), None)
+    if entrada is not None:
+        return entrada
+    inicios = [p.inicio for p in pausas]
+    return min(inicios) if inicios else None
+
+
 def recalcular_resumen_dia(conn, fecha: date, config: Config) -> ResumenDia:
     """Lee eventos/pausas del día, recalcula segundos trabajados y el score,
     y deja el resultado guardado en `daily_summary`."""
     eventos = db.eventos_del_dia(conn, fecha)
     pausas = db.pausas_del_dia(conn, fecha)
 
-    entrada = next((e.timestamp for e in eventos if e.tipo == "entrada"), None)
+    entrada = calcular_entrada_efectiva(eventos, pausas)
     salida = next((e.timestamp for e in reversed(eventos) if e.tipo == "salida"), None)
 
     duracion_almuerzo_seg = sum(p.duracion_segundos for p in pausas if p.clasificacion == "almuerzo")
